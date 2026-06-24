@@ -50,6 +50,11 @@ contract AIJudge is PrecompileConsumer {
 
     mapping(uint256 => Bounty) public bounties;
 
+    // commit-reveal: hide answers until reveal phase to prevent front-running
+    mapping(uint256 => mapping(address => bytes32)) public commitments;
+    mapping(uint256 => mapping(address => bool)) public hasCommitted;
+    mapping(uint256 => mapping(address => bool)) public hasRevealed;
+
     event BountyCreated(
         uint256 indexed bountyId,
         address indexed owner,
@@ -63,6 +68,9 @@ contract AIJudge is PrecompileConsumer {
         uint256 indexed submissionIndex,
         address indexed submitter
     );
+
+    event CommitmentSubmitted(uint256 indexed bountyId, address indexed submitter);
+    event AnswerRevealed(uint256 indexed bountyId, uint256 indexed submissionIndex, address indexed submitter);
 
     event AllAnswersJudged(uint256 indexed bountyId, bytes aiReview);
 
@@ -128,6 +136,48 @@ contract AIJudge is PrecompileConsumer {
             bounty.submissions.length - 1,
             msg.sender
         );
+    }
+
+    // Phase 1: commit answer hash (prevents front-running — answer stays hidden)
+    function submitCommitment(
+        uint256 bountyId,
+        bytes32 commitment
+    ) external bountyExists(bountyId) {
+        Bounty storage bounty = bounties[bountyId];
+
+        require(!bounty.judged, "already judged");
+        require(!bounty.finalized, "already finalized");
+        require(!hasCommitted[bountyId][msg.sender], "already committed");
+        require(bounty.submissions.length < MAX_SUBMISSIONS, "too many submissions");
+
+        commitments[bountyId][msg.sender] = commitment;
+        hasCommitted[bountyId][msg.sender] = true;
+
+        emit CommitmentSubmitted(bountyId, msg.sender);
+    }
+
+    // Phase 2: reveal answer — verified against commitment before accepted
+    function revealAnswer(
+        uint256 bountyId,
+        string calldata answer,
+        bytes32 salt
+    ) external bountyExists(bountyId) {
+        Bounty storage bounty = bounties[bountyId];
+
+        require(!bounty.judged, "already judged");
+        require(!bounty.finalized, "already finalized");
+        require(hasCommitted[bountyId][msg.sender], "no commitment found");
+        require(!hasRevealed[bountyId][msg.sender], "already revealed");
+        require(bytes(answer).length <= MAX_ANSWER_LENGTH, "answer too long");
+
+        bytes32 expected = keccak256(abi.encodePacked(answer, salt, msg.sender, bountyId));
+        require(expected == commitments[bountyId][msg.sender], "commitment mismatch");
+
+        hasRevealed[bountyId][msg.sender] = true;
+
+        bounty.submissions.push(Submission({submitter: msg.sender, answer: answer}));
+
+        emit AnswerRevealed(bountyId, bounty.submissions.length - 1, msg.sender);
     }
 
     function judgeAll(
