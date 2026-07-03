@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useAccount,
+  useSwitchChain,
+} from "wagmi";
 import type { Abi, Address, TransactionReceipt } from "viem";
 
 /**
@@ -19,9 +24,20 @@ type WriteParams = {
   gas?: bigint;
   gasPrice?: bigint;
   maxFeePerGas?: bigint;
+  maxPriorityFeePerGas?: bigint;
 };
 
 type WagmiWriteParams = Parameters<ReturnType<typeof useWriteContract>["writeContractAsync"]>[0];
+
+/**
+ * Ritual chain fee floor. Its base fee sits at ~7 wei while the RPC's suggested
+ * priority fee (1 gwei) dwarfs it, so wallets can't render a fee and show
+ * "network fee unavailable" (and may fall back to a bad gas guess). Supplying
+ * explicit EIP-1559 fees on every write makes wallets show a real fee and mine
+ * reliably. Values match hardhat/scripts LOWGAS, proven on chain 1979.
+ */
+const RITUAL_MAX_FEE_PER_GAS = 50_000_000n; // 0.05 gwei
+const RITUAL_MAX_PRIORITY_FEE_PER_GAS = 1_000_000n; // 0.001 gwei
 
 export type TxState =
   | "idle"
@@ -58,6 +74,13 @@ export function useWriteTx(onConfirmed?: (receipt: TransactionReceipt) => void) 
     isPending: isWalletPending,
     mutateAsync: writeContractAsync,
   } = useWriteContract();
+
+  // Used to auto-switch the wallet to the target chain before sending, so an
+  // action button never fails with a raw "wrong chain" error. We read the
+  // *connector's* chain (useAccount), not useChainId — the latter can report a
+  // configured chain even when the wallet sits on an unconfigured one (e.g. 61999).
+  const { chainId: walletChainId } = useAccount();
+  const { switchChainAsync } = useSwitchChain();
 
   const {
     data: receipt,
@@ -101,7 +124,22 @@ export function useWriteTx(onConfirmed?: (receipt: TransactionReceipt) => void) 
       notifiedRef.current = false;
       setSubmitting(true);
       try {
-        return await writeContractAsync(params as WagmiWriteParams);
+        // If the wallet is on the wrong network, switch it first instead of
+        // letting the write fail with a raw chain-mismatch error. When the
+        // wallet chain is unknown, switch defensively too.
+        if (params.chainId != null && walletChainId !== params.chainId) {
+          await switchChainAsync({ chainId: params.chainId });
+        }
+        // Fill in Ritual's EIP-1559 fees unless the caller set them, so every
+        // write (current and future) shows a real fee instead of "unavailable".
+        // Explicit `gas` limits from LLM-precompile callers are left untouched.
+        const withFees: WriteParams = {
+          ...params,
+          maxFeePerGas: params.maxFeePerGas ?? RITUAL_MAX_FEE_PER_GAS,
+          maxPriorityFeePerGas:
+            params.maxPriorityFeePerGas ?? RITUAL_MAX_PRIORITY_FEE_PER_GAS,
+        };
+        return await writeContractAsync(withFees as WagmiWriteParams);
       } catch (e) {
         setSubmitError(describeError(e));
         throw e;
@@ -109,7 +147,7 @@ export function useWriteTx(onConfirmed?: (receipt: TransactionReceipt) => void) 
         setSubmitting(false);
       }
     },
-    [writeContractAsync],
+    [writeContractAsync, switchChainAsync, walletChainId],
   );
 
   const reset = useCallback(() => {

@@ -1,4 +1,4 @@
-import { hexToString } from "viem";
+import { decodeAbiParameters, parseAbiParameters, hexToString } from "viem";
 
 export type RankingEntry = {
   index: number;
@@ -13,36 +13,101 @@ export type JudgeResult = {
 };
 
 export type DecodedAiReview = {
-  /** Raw decoded text (UTF-8 best-effort) of the on-chain `aiReview` bytes. */
+  /** Human-readable text of the AI verdict (the model's `content`). */
   raw: string;
-  /** Parsed judge result, or null if the bytes weren't parseable JSON. */
+  /** Parsed judge result, or null if the bytes weren't parseable. */
   parsed: JudgeResult | null;
 };
 
 const EMPTY_BYTES = new Set(["", "0x"]);
 
 /**
- * Decode the on-chain `aiReview` bytes into text and, when possible, a parsed
- * judge result.
+ * Decode the on-chain `aiReview` bytes into text and a parsed judge result.
  *
- * The contract stores the model's response bytes. We try to read them as UTF-8,
- * strip any stray markdown fences, pull out the first JSON object, and parse it
- * into the `{ winnerIndex, ranking, summary }` shape. If anything fails we still
- * return the raw text so the UI can show it verbatim.
+ * The contract stores the LLM precompile's raw `CompletionData` (an ABI blob),
+ * not plain text. We ABI-decode it down to the assistant `content` string —
+ * which is shaped `WINNER: <index>\n<reason>` — and read the winner + reason
+ * out of that. If the bytes aren't CompletionData (e.g. an older deployment
+ * that stored a UTF-8 JSON result), we fall back to the JSON path.
  */
 export function decodeAiReview(aiReviewHex?: string): DecodedAiReview | null {
   if (!aiReviewHex || EMPTY_BYTES.has(aiReviewHex)) return null;
 
+  // Preferred path: aiReview is the raw CompletionData ABI blob.
+  const content = decodeCompletionContent(aiReviewHex as `0x${string}`);
+  if (content !== null) {
+    const winnerIndex = parseWinnerIndex(content);
+    return {
+      raw: content,
+      parsed:
+        winnerIndex === null
+          ? null
+          : { winnerIndex, ranking: [], summary: stripWinnerLine(content) },
+    };
+  }
+
+  // Fallback: older deployments stored a UTF-8 JSON judge result.
   let raw: string;
   try {
     raw = hexToString(aiReviewHex as `0x${string}`);
   } catch {
-    // Not valid UTF-8 bytes — surface the hex itself.
     raw = aiReviewHex;
   }
+  return { raw, parsed: tryParseJudgeResult(raw) };
+}
 
-  const parsed = tryParseJudgeResult(raw);
-  return { raw, parsed };
+/**
+ * ABI-decode the LLM `CompletionData` down to the assistant message content.
+ * Layout mirrors the contract's `_decodeContent`:
+ *   top: (string id, string object, uint created, string model, string sysFp,
+ *         string svcTier, uint choicesCount, bytes[] choicesData, bytes usage)
+ *   choicesData[0]: (uint index, string finishReason, bytes messageData)
+ *   messageData:    (string role, string content, string refusal,
+ *                    uint toolCallsCount, bytes[] toolCallsData)
+ * Returns null when the bytes aren't a CompletionData blob.
+ */
+function decodeCompletionContent(hex: `0x${string}`): string | null {
+  try {
+    const top = decodeAbiParameters(
+      parseAbiParameters(
+        "string, string, uint256, string, string, string, uint256, bytes[], bytes",
+      ),
+      hex,
+    );
+    const choicesData = top[7] as readonly `0x${string}`[];
+    if (!choicesData || choicesData.length === 0) return null;
+
+    const choice = decodeAbiParameters(
+      parseAbiParameters("uint256, string, bytes"),
+      choicesData[0],
+    );
+    const messageData = choice[2] as `0x${string}`;
+
+    const message = decodeAbiParameters(
+      parseAbiParameters("string, string, string, uint256, bytes[]"),
+      messageData,
+    );
+    return message[1] as string;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read the winner index out of the verdict text. Mirrors the contract's
+ * `_parseFirstUint` (first run of digits) but prefers an explicit `WINNER:`
+ * marker when present.
+ */
+function parseWinnerIndex(text: string): number | null {
+  const marked = text.match(/WINNER:\s*(\d+)/i);
+  if (marked) return Number(marked[1]);
+  const first = text.match(/\d+/);
+  return first ? Number(first[0]) : null;
+}
+
+/** Drop the leading `WINNER: <n>` line, leaving the reasoning as the summary. */
+function stripWinnerLine(text: string): string {
+  return text.replace(/^\s*WINNER:\s*\d+\s*/i, "").trim();
 }
 
 function tryParseJudgeResult(text: string): JudgeResult | null {

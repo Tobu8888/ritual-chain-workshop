@@ -64,13 +64,18 @@ export function CreateBountyForm({ onCreated }: { onCreated?: (bountyId: bigint)
     if (!deadline) return "Pick a deadline.";
     const ts = new Date(deadline).getTime();
     if (!Number.isFinite(ts)) return "Invalid deadline.";
-    if (reward !== "") {
-      try {
-        parseEther(reward);
-      } catch {
-        return "Reward must be a valid number.";
-      }
+    if (!reward.trim()) return "Reward is required.";
+    let rewardWei: bigint;
+    try {
+      rewardWei = parseEther(reward.trim());
+    } catch {
+      return "Reward must be a valid number.";
     }
+    // The contract reverts on a zero reward (`require(msg.value > 0)`). Catch it
+    // here so the user gets a clear message instead of a failed transaction
+    // (a zero value also makes gas estimation revert, which wallets then
+    // paper over with a huge fallback gas limit the chain rejects).
+    if (rewardWei <= 0n) return "Reward must be greater than 0.";
     return null;
   }, [title, rubric, deadline, reward]);
 
@@ -86,8 +91,8 @@ export function CreateBountyForm({ onCreated }: { onCreated?: (bountyId: bigint)
     }
 
     const deadlineTs = BigInt(Math.floor(deadlineMs / 1000));
-    console.log("Creating bounty with", { title, rubric, deadlineTs, reward });
-    const value = reward.trim() === "" ? 0n : parseEther(reward.trim());
+    // Validation above guarantees a well-formed, non-zero reward here.
+    const value = parseEther(reward.trim());
     setCreatedId(null);
 
     try {

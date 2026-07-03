@@ -14,7 +14,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-white/10 bg-zinc-900/60 backdrop-blur shadow-xl shadow-black/20 ${className}`}
+      className={`rounded-2xl border border-white/10 bg-black/50 backdrop-blur shadow-xl shadow-[#8840ff]/10 ${className}`}
     >
       {children}
     </div>
@@ -60,11 +60,11 @@ export function CardBody({
 type Tone = "green" | "amber" | "indigo" | "zinc" | "red";
 
 const TONES: Record<Tone, string> = {
-  green: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
-  amber: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
-  indigo: "bg-indigo-500/15 text-indigo-300 ring-indigo-500/30",
+  green: "bg-[#40ffaf]/12 text-[#40ffaf] ring-[#40ffaf]/40",
+  amber: "bg-[#f6be4f]/12 text-[#f6be4f] ring-[#f6be4f]/40",
+  indigo: "bg-[#8840ff]/18 text-[#c4a0ff] ring-[#8840ff]/45",
   zinc: "bg-zinc-500/15 text-zinc-300 ring-zinc-500/30",
-  red: "bg-red-500/15 text-red-300 ring-red-500/30",
+  red: "bg-[#ff5757]/12 text-[#ff5757] ring-[#ff5757]/40",
 };
 
 export function Badge({
@@ -97,9 +97,9 @@ export function Button({
 }: ButtonProps) {
   const styles: Record<string, string> = {
     primary:
-      "bg-indigo-500 text-white hover:bg-indigo-400 disabled:bg-indigo-500/40",
+      "bg-[#40ffaf] text-black font-semibold hover:bg-[#5effc0] shadow-[0_0_20px_rgba(64,255,175,0.35)] hover:shadow-[0_0_30px_rgba(64,255,175,0.55)] disabled:bg-[#40ffaf]/25 disabled:shadow-none",
     secondary:
-      "bg-white/10 text-zinc-100 hover:bg-white/15 disabled:bg-white/5",
+      "bg-white/5 text-zinc-100 ring-1 ring-inset ring-white/15 hover:bg-white/10 hover:ring-[#00c2ff]/40 disabled:bg-white/5",
     ghost: "bg-transparent text-zinc-300 hover:bg-white/5",
   };
   return (
@@ -135,7 +135,7 @@ export function Field({
 }
 
 const inputBase =
-  "w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-400/60 focus:outline-none focus:ring-1 focus:ring-indigo-400/40";
+  "w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-[#00c2ff]/60 focus:outline-none focus:ring-1 focus:ring-[#00c2ff]/40";
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${inputBase} ${props.className ?? ""}`} />;
@@ -193,7 +193,7 @@ export function TxStatus({
           href={`${explorerBase}/tx/${hash}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
+          className="text-[#00c2ff] hover:text-[#5ad6ff] underline underline-offset-2"
         >
           View tx
         </a>

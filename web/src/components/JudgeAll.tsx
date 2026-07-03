@@ -76,6 +76,10 @@ export function JudgeAll({
         functionName: "judgeAll",
         args: [bountyId, llmInput],
         chainId: ritualChain.id,
+        // LLM-precompile txs can't be gas-estimated (eth_estimateGas reverts),
+        // so wallets fall back to 0.35 × block limit = 70M and the node rejects
+        // it. Send the script-proven explicit gas instead (prove-judge.mjs).
+        gas: 5_000_000n,
       });
     } catch (e) {
       setGathering(false);

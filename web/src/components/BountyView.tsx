@@ -7,6 +7,7 @@ import { isAddressEqual } from "@/lib/format";
 import { decodeAiReview } from "@/lib/aiReview";
 import { BountyDetail } from "@/components/BountyDetail";
 import { SubmitAnswer } from "@/components/SubmitAnswer";
+import { JudgeAndFinalize } from "@/components/JudgeAndFinalize";
 import { JudgeAll } from "@/components/JudgeAll";
 import { FinalizeWinner } from "@/components/FinalizeWinner";
 import { AIReviewDisplay } from "@/components/AIReviewDisplay";
@@ -63,6 +64,12 @@ export function BountyView({ bountyId }: { bountyId: bigint }) {
           bountyId={bountyId}
           bounty={bounty}
           onSubmitted={reload}
+        />
+        <JudgeAndFinalize
+          bountyId={bountyId}
+          bounty={bounty}
+          isOwner={isOwner}
+          onFinalized={reload}
         />
         <JudgeAll
           bountyId={bountyId}

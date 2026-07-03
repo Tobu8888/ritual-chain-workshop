@@ -1,0 +1,17 @@
+# dependencies
+node_modules
+
+# hardhat / build artifacts
+/cache
+/out
+/hardhat/cache
+/hardhat/artifacts
+/hardhat/ignition/deployments
+
+# env
+.env
+.env.local
+*.env
+
+# misc
+.DS_Store

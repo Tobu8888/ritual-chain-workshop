@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #09090b;
-  --foreground: #fafafa;
+  --background: #000000;
+  --foreground: #f4f4f5;
+  /* Ritual synthwave palette */
+  --rit-green: #40ffaf;
+  --rit-purple: #8840ff;
+  --rit-pink: #e554e8;
+  --rit-cyan: #00c2ff;
+  --rit-amber: #f6be4f;
+  --rit-coral: #ff5757;
 }
 
 @theme inline {
@@ -14,9 +21,74 @@
 
 body {
   background:
-    radial-gradient(60rem 60rem at 80% -10%, rgba(99, 102, 241, 0.12), transparent 60%),
-    radial-gradient(50rem 50rem at -10% 10%, rgba(16, 185, 129, 0.08), transparent 55%),
+    /* neon glows */
+    radial-gradient(45rem 45rem at 85% -15%, rgba(136, 64, 255, 0.22), transparent 60%),
+    radial-gradient(40rem 40rem at 8% 4%, rgba(229, 84, 232, 0.14), transparent 55%),
+    radial-gradient(52rem 30rem at 50% 118%, rgba(0, 194, 255, 0.12), transparent 60%),
+    /* synth grid */
+    linear-gradient(rgba(136, 64, 255, 0.05) 1px, transparent 1px) 0 0 / 46px 46px,
+    linear-gradient(90deg, rgba(136, 64, 255, 0.05) 1px, transparent 1px) 0 0 / 46px 46px,
     var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Neon gradient heading (purple → pink → cyan + glow) */
+.neon-heading {
+  background: linear-gradient(
+    90deg,
+    var(--rit-purple),
+    var(--rit-pink) 48%,
+    var(--rit-cyan)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 18px rgba(229, 84, 232, 0.35));
+}
+
+.text-glow-green {
+  color: var(--rit-green);
+  text-shadow: 0 0 14px rgba(64, 255, 175, 0.5);
+}
+
+/* Retro mono eyebrow / labels */
+.mono-label {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.14em;
+}
+
+/* Winner pulse (neon green ring) */
+@keyframes winnerPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(64, 255, 175, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 22px 2px rgba(64, 255, 175, 0.35);
+  }
+}
+.animate-winner {
+  animation: winnerPulse 2.4s ease-in-out infinite;
+}
+
+/* Data pulse travelling along a connector rail */
+@keyframes railFlow {
+  0% {
+    left: -4px;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+.rail-pulse {
+  animation: railFlow 2.6s linear infinite;
 }

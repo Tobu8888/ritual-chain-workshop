@@ -112,6 +112,25 @@ const abi = [
     type: "event",
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "winner",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "totalWins",
+        type: "uint256",
+      },
+    ],
+    name: "LeaderboardUpdated",
+    type: "event",
+  },
+  {
     inputs: [],
     name: "MAX_ANSWER_LENGTH",
     outputs: [
@@ -352,6 +371,43 @@ const abi = [
     name: "judgeAll",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "bountyId",
+        type: "uint256",
+      },
+      {
+        internalType: "address",
+        name: "executor",
+        type: "address",
+      },
+    ],
+    name: "judgeAndFinalize",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    name: "wins",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
   {

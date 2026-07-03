@@ -1,6 +1,6 @@
 import { createConfig, http } from "wagmi";
 import { defineChain } from "viem";
-import { injected, metaMask, walletConnect } from "wagmi/connectors";
+import { walletConnect } from "wagmi/connectors";
 import { ritualChainId, ritualRpcUrl } from "@/config/contract";
 
 /**
@@ -21,16 +21,22 @@ export const ritualChain = defineChain({
 
 const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID?.trim();
 
-// Injected + MetaMask always work for a workshop. WalletConnect is only added
-// when a project id is provided, since it throws without one.
-const connectors = [
-  injected({ shimDisconnect: true }),
-  ...(walletConnectProjectId ? [walletConnect({ projectId: walletConnectProjectId })] : []),
-];
+// Browser wallets (OKX, MetaMask, …) are surfaced through EIP-6963 discovery
+// (see `multiInjectedProviderDiscovery` below), each as its own named button —
+// so we don't add a generic `injected()` catch-all, which grabs whichever
+// window.ethereum happens to win and is ambiguous when several wallets are
+// installed. WalletConnect is added only when a project id is present (it
+// throws without one) as a mobile/QR fallback.
+const connectors = walletConnectProjectId
+  ? [walletConnect({ projectId: walletConnectProjectId })]
+  : [];
 
 export const config = createConfig({
   chains: [ritualChain],
   connectors,
+  // Discover injected wallets via EIP-6963 so each appears as a distinct
+  // connector (OKX Wallet, MetaMask, …) instead of one opaque "Injected".
+  multiInjectedProviderDiscovery: true,
   ssr: true,
   transports: {
     [ritualChain.id]: http(ritualRpcUrl),
