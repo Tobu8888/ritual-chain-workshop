@@ -3,14 +3,24 @@
 import { useState } from "react";
 import { useAccount, usePublicClient } from "wagmi";
 import aiJudgeAbi from "@/abi/AIJudge";
-import { contractAddress, executorAddress } from "@/config/contract";
+import { contractAddress, executorAddress, MIN_SUBMISSIONS } from "@/config/contract";
 import { ritualChain } from "@/config/wagmi";
 import type { Bounty } from "@/lib/bounty";
 import { buildJudgeAllLlmInput, type JudgeSubmission } from "@/lib/ritualLlm";
 import { useWriteTx } from "@/hooks/useWriteTx";
+import { usePendingTx } from "@/hooks/usePendingTx";
 import { useRitualWalletStatus } from "@/hooks/useRitualWalletStatus";
 import { RitualWalletPanel } from "@/components/RitualWalletPanel";
-import { Card, CardHeader, CardBody, Button, TxStatus, Notice, Spinner } from "@/components/ui";
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  Button,
+  TxStatus,
+  Notice,
+  Spinner,
+  PendingTxNotice,
+} from "@/components/ui";
 
 const explorerBase = ritualChain.blockExplorers?.default.url;
 
@@ -30,15 +40,18 @@ export function JudgeAll({
   const [gathering, setGathering] = useState(false);
   const [gatherError, setGatherError] = useState<string | null>(null);
   const tx = useWriteTx(() => onJudged());
+  const { hasPending } = usePendingTx();
 
   // Preflight the *connected* wallet's RitualWallet funding (not the bounty
   // contract) — judgeAll spends prepaid+locked RITUAL via the LLM precompile.
   const walletStatus = useRitualWalletStatus(address);
 
   const count = Number(bounty.submissionCount);
+  const enoughEntries = count >= MIN_SUBMISSIONS;
 
-  // Gate per spec: owner only, has submissions, not yet judged.
-  if (!isOwner || bounty.judged || bounty.finalized || count === 0) {
+  // Gate per spec: owner only, not yet judged/finalized. Shown (disabled) when
+  // there are too few entries so the anti-farming floor is visible.
+  if (!isOwner || bounty.judged || bounty.finalized) {
     return null;
   }
 
@@ -103,21 +116,35 @@ export function JudgeAll({
       <CardBody className="space-y-3">
         <Notice tone="indigo">AI review is advisory. The bounty owner finalizes the winner.</Notice>
 
+        {!enoughEntries && (
+          <Notice tone="amber">
+            Needs at least {MIN_SUBMISSIONS} entries before it can be judged
+            (currently {count}).
+          </Notice>
+        )}
+
         <RitualWalletPanel status={walletStatus} onDeposited={walletStatus.refetch} />
 
-        <Button onClick={handleJudge} disabled={busy || !fundingReady} className="w-full">
+        <Button
+          onClick={handleJudge}
+          disabled={busy || !fundingReady || hasPending || !enoughEntries}
+          className="w-full"
+        >
           {gathering ? (
             <>
               <Spinner /> Gathering {count} submissions…
             </>
           ) : tx.isBusy ? (
             "Judging…"
+          ) : !enoughEntries ? (
+            `Needs ${MIN_SUBMISSIONS}+ entries (${count})`
           ) : !fundingReady ? (
             "Fund RitualWallet to judge"
           ) : (
             `Judge all (${count})`
           )}
         </Button>
+        <PendingTxNotice show={hasPending && !busy} />
         {gatherError && <Notice tone="red">{gatherError}</Notice>}
         <TxStatus state={tx.state} error={tx.error} hash={tx.hash} explorerBase={explorerBase} />
       </CardBody>

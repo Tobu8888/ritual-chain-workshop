@@ -18,6 +18,7 @@ type Step = {
   body: ReactNode;
   chips?: number[];
   winner?: number;
+  bar?: number;
 };
 
 const STEPS: Step[] = [
@@ -40,7 +41,9 @@ const STEPS: Step[] = [
     body: (
       <>
         Each answer goes in <span className="text-zinc-200">sealed</span>, then is
-        revealed later — so no one can copy. Entry is free; just gas.
+        revealed later — so no one can copy. It takes{" "}
+        <span className="text-zinc-200">≥2 real entries</span>, and the host{" "}
+        <span className="text-zinc-200">can&apos;t answer their own bounty</span>.
       </>
     ),
   },
@@ -50,12 +53,14 @@ const STEPS: Step[] = [
     title: "AI scores on-chain",
     body: (
       <>
-        Ritual&apos;s <span className="text-zinc-200">on-chain AI</span> reads every
-        answer and rates each by quality — not random luck.
+        Ritual&apos;s <span className="text-zinc-200">on-chain AI</span> rates every
+        answer <span className="text-zinc-200">0–100</span> by quality — the best
+        must clear a <span className="text-[#40ffaf]">60 bar</span> to win.
       </>
     ),
-    chips: [42, 18, 35],
-    winner: 42,
+    chips: [88, 41, 55],
+    winner: 88,
+    bar: 60,
   },
   {
     n: "4",
@@ -63,9 +68,11 @@ const STEPS: Step[] = [
     title: "Winner auto-paid",
     body: (
       <>
-        The contract pays the{" "}
-        <span className="text-zinc-200">highest-scored answer instantly</span>, in the
-        same transaction. No human picks.
+        The top answer above the bar is{" "}
+        <span className="text-zinc-200">paid instantly</span>, same transaction. If
+        nothing clears it, the prize is{" "}
+        <span className="text-zinc-200">refunded to the host</span> — no weak default
+        winner.
       </>
     ),
   },
@@ -94,25 +101,49 @@ function Rail() {
   );
 }
 
-function Chips({ chips, winner }: { chips: number[]; winner?: number }) {
+function Chips({
+  chips,
+  winner,
+  bar,
+}: {
+  chips: number[];
+  winner?: number;
+  bar?: number;
+}) {
   return (
-    <div className="mt-3 flex items-center justify-center gap-1.5">
-      {chips.map((c) => {
-        const win = c === winner;
-        return (
-          <span
-            key={c}
-            className={`mono-label rounded-md px-1.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${
-              win
-                ? "animate-winner bg-[#40ffaf]/15 text-[#40ffaf] ring-[#40ffaf]/45"
-                : "bg-white/5 text-zinc-500 ring-white/10"
-            }`}
-            title={win ? "highest score → wins" : "lower score"}
-          >
-            {c}
-          </span>
-        );
-      })}
+    <div className="mt-3 flex flex-col items-center gap-1">
+      <div className="flex items-center justify-center gap-1.5">
+        {chips.map((c) => {
+          const win = c === winner;
+          const below = bar !== undefined && c < bar;
+          return (
+            <span
+              key={c}
+              className={`mono-label rounded-md px-1.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${
+                win
+                  ? "animate-winner bg-[#40ffaf]/15 text-[#40ffaf] ring-[#40ffaf]/45"
+                  : below
+                    ? "bg-white/5 text-zinc-600 ring-white/10 line-through decoration-zinc-600"
+                    : "bg-white/5 text-zinc-400 ring-white/10"
+              }`}
+              title={
+                win
+                  ? "highest score → wins"
+                  : below
+                    ? "below the 60 bar"
+                    : "cleared the bar, not top"
+              }
+            >
+              {c}
+            </span>
+          );
+        })}
+      </div>
+      {bar !== undefined && (
+        <span className="mono-label text-[10px] tracking-wide text-[#40ffaf]/80">
+          pass bar {bar}/100
+        </span>
+      )}
     </div>
   );
 }
@@ -125,7 +156,7 @@ function StepBody({ s }: { s: Step }) {
       </div>
       <h3 className="mt-1 text-sm font-semibold text-zinc-100">{s.title}</h3>
       <p className="mt-1 text-xs leading-relaxed text-zinc-400">{s.body}</p>
-      {s.chips && <Chips chips={s.chips} winner={s.winner} />}
+      {s.chips && <Chips chips={s.chips} winner={s.winner} bar={s.bar} />}
     </>
   );
 }
@@ -174,7 +205,7 @@ export function HowItWorks() {
         <div className="mt-6 flex items-center gap-3">
           <span className="h-px flex-1 bg-gradient-to-r from-transparent to-[#8840ff]/40" />
           <p className="mono-label text-center text-[11px] tracking-wide text-zinc-400">
-            no bribes · no bias · no skipping the payout —{" "}
+            no bribes · no bias · no self-dealing · no weak default winner —{" "}
             <span className="text-[#40ffaf]">it&apos;s on-chain code</span>
           </p>
           <span className="h-px flex-1 bg-gradient-to-l from-transparent to-[#00c2ff]/40" />

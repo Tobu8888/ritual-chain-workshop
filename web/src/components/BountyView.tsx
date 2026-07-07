@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useAccount } from "wagmi";
 import { useBounty } from "@/hooks/useBounty";
 import { isAddressEqual } from "@/lib/format";
+import { hasWinner } from "@/lib/bounty";
 import { decodeAiReview } from "@/lib/aiReview";
 import { BountyDetail } from "@/components/BountyDetail";
 import { SubmitAnswer } from "@/components/SubmitAnswer";
@@ -63,6 +64,7 @@ export function BountyView({ bountyId }: { bountyId: bigint }) {
         <SubmitAnswer
           bountyId={bountyId}
           bounty={bounty}
+          isOwner={isOwner}
           onSubmitted={reload}
         />
         <JudgeAndFinalize
@@ -93,7 +95,7 @@ export function BountyView({ bountyId }: { bountyId: bigint }) {
           count={Number(bounty.submissionCount)}
           judge={judge}
           finalWinner={
-            bounty.finalized ? Number(bounty.winnerIndex) : undefined
+            hasWinner(bounty) ? Number(bounty.winnerIndex) : undefined
           }
         />
       </div>

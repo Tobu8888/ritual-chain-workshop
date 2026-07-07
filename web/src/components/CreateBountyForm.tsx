@@ -7,6 +7,7 @@ import { contractAddress, isContractConfigured } from "@/config/contract";
 import { ritualChain } from "@/config/wagmi";
 import aiJudgeAbi from "@/abi/AIJudge";
 import { useWriteTx } from "@/hooks/useWriteTx";
+import { usePendingTx } from "@/hooks/usePendingTx";
 import {
   Card,
   CardHeader,
@@ -17,6 +18,7 @@ import {
   Button,
   TxStatus,
   Notice,
+  PendingTxNotice,
 } from "@/components/ui";
 
 const explorerBase = ritualChain.blockExplorers?.default.url;
@@ -33,6 +35,7 @@ function defaultDeadline(): string {
 
 export function CreateBountyForm({ onCreated }: { onCreated?: (bountyId: bigint) => void }) {
   const { isConnected } = useAccount();
+  const { hasPending } = usePendingTx();
   const [title, setTitle] = useState("");
   const [rubric, setRubric] = useState("");
   const [deadline, setDeadline] = useState(defaultDeadline());
@@ -168,11 +171,15 @@ export function CreateBountyForm({ onCreated }: { onCreated?: (bountyId: bigint)
 
           <Button
             type="submit"
-            disabled={!isConnected || !isContractConfigured || !!validation || tx.isBusy}
+            disabled={
+              !isConnected || !isContractConfigured || !!validation || tx.isBusy || hasPending
+            }
             className="w-full"
           >
             {tx.isBusy ? "Creating…" : "Create bounty"}
           </Button>
+
+          <PendingTxNotice show={hasPending && !tx.isBusy} />
 
           {!isConnected && (
             <p className="text-xs text-zinc-500">Connect your wallet to create a bounty.</p>

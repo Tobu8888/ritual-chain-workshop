@@ -1,7 +1,7 @@
 "use client";
 
 import type { Bounty } from "@/lib/bounty";
-import { getBountyStatus, STATUS_META } from "@/lib/bounty";
+import { getBountyStatus, STATUS_META, isRefunded } from "@/lib/bounty";
 import { useNow } from "@/hooks/useNow";
 import { shortenAddress, formatReward, formatTimestamp, formatRelative } from "@/lib/format";
 import { Card, CardHeader, CardBody, Badge, Stat } from "@/components/ui";
@@ -62,7 +62,13 @@ export function BountyDetail({
           <Stat label="Owner" value={shortenAddress(bounty.owner)} />
         </div>
 
-        {bounty.finalized && (
+        {bounty.finalized && isRefunded(bounty) && (
+          <div className="rounded-xl bg-amber-500/10 px-3 py-2 text-sm text-amber-200 ring-1 ring-inset ring-amber-500/30">
+            Finalized with no winner — the AI scored every answer below the
+            quality bar, so the reward was refunded to the sponsor.
+          </div>
+        )}
+        {bounty.finalized && !isRefunded(bounty) && (
           <div className="rounded-xl bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200 ring-1 ring-inset ring-emerald-500/30">
             Finalized, winner is submission{" "}
             <span className="font-mono font-semibold">#{bounty.winnerIndex.toString()}</span>.

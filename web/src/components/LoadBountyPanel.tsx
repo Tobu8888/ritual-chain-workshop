@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardHeader, CardBody, Field, Input, Button } from "@/components/ui";
+import { RecentBountyRow } from "@/components/RecentBountyRow";
 
 export function LoadBountyPanel({
   selectedId,
@@ -61,25 +62,20 @@ export function LoadBountyPanel({
 
         {recentIds.length > 0 && (
           <div>
-            <div className="mb-1 text-[11px] uppercase tracking-wide text-zinc-500">
+            <div className="mb-1.5 text-[11px] uppercase tracking-wide text-zinc-500">
               Recent
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {recentIds.map((id) => (
-                <button
+            <div className="divide-y divide-white/10 overflow-hidden rounded-xl border border-white/10 bg-black/20">
+              {recentIds.slice(0, 6).map((id) => (
+                <RecentBountyRow
                   key={id}
+                  id={id}
+                  selected={selectedId?.toString() === id}
                   onClick={() => {
                     setOverride(null);
                     load(id);
                   }}
-                  className={`rounded-lg px-2 py-1 font-mono text-xs ring-1 ring-inset transition-colors ${
-                    selectedId?.toString() === id
-                      ? "bg-indigo-500/20 text-indigo-200 ring-indigo-500/40"
-                      : "bg-black/20 text-zinc-300 ring-white/10 hover:bg-white/10"
-                  }`}
-                >
-                  #{id}
-                </button>
+                />
               ))}
             </div>
           </div>

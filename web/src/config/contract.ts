@@ -9,6 +9,15 @@ import aiJudgeAbi from "@/abi/AIJudge";
 
 export const aiJudgeAbiConst = aiJudgeAbi;
 
+/**
+ * On-chain anti-farming constants — MUST mirror the deployed AIJudge contract.
+ * A bounty needs at least MIN_SUBMISSIONS distinct entries before it can be
+ * judged, and the AI must score the winner at or above MIN_SCORE (0-100) or the
+ * reward is refunded to the sponsor instead of paid out.
+ */
+export const MIN_SUBMISSIONS = 2;
+export const MIN_SCORE = 60;
+
 const rawAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS?.trim();
 
 /** Deployed SimpleAIBountyJudge address, or `undefined` if not configured. */

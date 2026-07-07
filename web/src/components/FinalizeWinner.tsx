@@ -8,6 +8,7 @@ import type { Bounty } from "@/lib/bounty";
 import { decodeAiReview } from "@/lib/aiReview";
 import { formatReward } from "@/lib/format";
 import { useWriteTx } from "@/hooks/useWriteTx";
+import { usePendingTx } from "@/hooks/usePendingTx";
 import {
   Card,
   CardHeader,
@@ -17,6 +18,7 @@ import {
   Button,
   TxStatus,
   Notice,
+  PendingTxNotice,
 } from "@/components/ui";
 
 const explorerBase = ritualChain.blockExplorers?.default.url;
@@ -42,6 +44,7 @@ export function FinalizeWinner({
     override ?? (recommended !== undefined ? String(recommended) : "");
 
   const tx = useWriteTx(() => onFinalized());
+  const { hasPending } = usePendingTx();
 
   // Gate per spec: owner only, judged, not finalized.
   if (!isOwner || !bounty.judged || bounty.finalized) return null;
@@ -105,11 +108,13 @@ export function FinalizeWinner({
 
         <Button
           onClick={handleFinalize}
-          disabled={!valid || tx.isBusy}
+          disabled={!valid || tx.isBusy || hasPending}
           className="w-full"
         >
           {tx.isBusy ? "Finalizing…" : "Finalize winner"}
         </Button>
+
+        <PendingTxNotice show={hasPending && !tx.isBusy} />
 
         <TxStatus
           state={tx.state}

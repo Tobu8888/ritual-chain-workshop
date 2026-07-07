@@ -224,6 +224,25 @@ export function Notice({
   );
 }
 
+/**
+ * Standard warning shown next to a write button when the connected wallet
+ * already has an unconfirmed transaction. Sending another now would reserve the
+ * next nonce behind it and stack the mempool — see `usePendingTx`. Rendering is
+ * gated by the caller (`show`) so the copy stays identical across every action.
+ */
+export function PendingTxNotice({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <Notice tone="amber">
+      <span className="inline-flex items-center gap-2">
+        <Spinner />
+        You have a transaction pending. Wait for it to confirm before sending
+        another — stacking transactions can gridlock your wallet.
+      </span>
+    </Notice>
+  );
+}
+
 export function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-xl bg-black/20 px-3 py-2">

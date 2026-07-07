@@ -78,3 +78,20 @@ export const STATUS_META: Record<
 export function canSubmit(b: Bounty, nowSeconds = Date.now() / 1000): boolean {
   return !b.judged && !b.finalized && Number(b.deadline) > nowSeconds;
 }
+
+/**
+ * Sentinel written by the contract when a bounty is finalized with NO winner —
+ * i.e. the AI scored the field below MIN_SCORE and the reward was refunded to
+ * the sponsor. Mirrors `type(uint256).max` set at createBounty and left as-is.
+ */
+export const NO_WINNER_INDEX = 2n ** 256n - 1n;
+
+/** Finalized AND a real winner was paid (as opposed to a refund). */
+export function hasWinner(b: Bounty): boolean {
+  return b.finalized && b.winnerIndex !== NO_WINNER_INDEX;
+}
+
+/** Finalized with no winner: the reward was refunded to the sponsor. */
+export function isRefunded(b: Bounty): boolean {
+  return b.finalized && b.winnerIndex === NO_WINNER_INDEX;
+}

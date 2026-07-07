@@ -8,6 +8,7 @@ import { contractAddress } from "@/config/contract";
 import { ritualChain } from "@/config/wagmi";
 import { canSubmit, type Bounty } from "@/lib/bounty";
 import { useWriteTx } from "@/hooks/useWriteTx";
+import { usePendingTx } from "@/hooks/usePendingTx";
 import {
   Card,
   CardHeader,
@@ -16,6 +17,8 @@ import {
   Textarea,
   Button,
   TxStatus,
+  Notice,
+  PendingTxNotice,
 } from "@/components/ui";
 
 const explorerBase = ritualChain.blockExplorers?.default.url;
@@ -23,13 +26,16 @@ const explorerBase = ritualChain.blockExplorers?.default.url;
 export function SubmitAnswer({
   bountyId,
   bounty,
+  isOwner,
   onSubmitted,
 }: {
   bountyId: bigint;
   bounty: Bounty;
+  isOwner: boolean;
   onSubmitted: () => void;
 }) {
   const { isConnected } = useAccount();
+  const { hasPending } = usePendingTx();
   const [answer, setAnswer] = useState("");
   const now = useNow();
   const tx = useWriteTx(() => {
@@ -39,6 +45,26 @@ export function SubmitAnswer({
 
   // Submission window closed — nothing to show.
   if (!canSubmit(bounty, now / 1000)) return null;
+
+  // Anti-Sybil: the sponsor cannot answer their own bounty (the contract also
+  // reverts this). Show why instead of a form that would fail on submit.
+  if (isOwner) {
+    return (
+      <Card>
+        <CardHeader
+          title="Submit an answer"
+          subtitle="Open until the deadline. One entry, judged against the rubric."
+        />
+        <CardBody>
+          <Notice tone="amber">
+            You created this bounty, so you can&apos;t submit an answer to it.
+            This keeps a sponsor from entering — and auto-winning — their own
+            reward. Share it so others can compete.
+          </Notice>
+        </CardBody>
+      </Card>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,11 +100,12 @@ export function SubmitAnswer({
           </Field>
           <Button
             type="submit"
-            disabled={!isConnected || !answer.trim() || tx.isBusy}
+            disabled={!isConnected || !answer.trim() || tx.isBusy || hasPending}
             className="w-full"
           >
             {tx.isBusy ? "Submitting…" : "Submit answer"}
           </Button>
+          <PendingTxNotice show={hasPending && !tx.isBusy} />
           {!isConnected && (
             <p className="text-xs text-zinc-500">
               Connect your wallet to submit.
